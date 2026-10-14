@@ -1,0 +1,387 @@
+// =====================================================================
+// Ejareban — Rental Marketplace Data Model
+// Engine: SQLite (MVP) — designed to migrate to PostgreSQL unchanged.
+// Note: SQLite cannot store lists; multi-value fields use a JSON-encoded
+//       String and are parsed in the data layer (see src/lib/types.ts).
+//       Status fields use String + exported constants (src/lib/constants.ts)
+//       for maximum cross-engine portability.
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------
+// Users & Trust
+// ---------------------------------------------------------------------
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  username            String?  @unique // login handle (Persian or English); optional but unique
+  name                String
+  firstName           String?  // customer first name (optional for admin)
+  lastName            String?  // customer last name (optional for admin)
+  phone               String?  @unique
+  passwordHash        String?  // bcrypt hash; null for system-seeded demo accounts
+  avatar              String?
+  nationalId          String?  // Shahkar / national ID (hashed at rest in prod)
+  isIdentityVerified  Boolean  @default(false)
+  isPhoneVerified     Boolean  @default(false)
+  isSocialVerified    Boolean  @default(false) // social proof (LinkedIn / social network)
+  twoFactorEnabled    Boolean  @default(false)
+  twoFactorSecret     String?  // TOTP secret (encrypted at rest in prod)
+  role                String   @default("USER") // USER | OWNER | ADMIN
+  trustScore          Int      @default(0) // 0-100
+  trustTier           String   @default("NEW") // NEW | BRONZE | SILVER | GOLD
+  ratingSum           Int      @default(0)
+  ratingCount         Int      @default(0)
+  rentalsCompleted    Int      @default(0)
+  city                String?
+  bio                 String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  listings            Listing[]
+  bookingsAsRenter    Booking[]      @relation("RenterBookings")
+  bookingsAsOwner     Booking[]      @relation("OwnerBookings")
+  reviewsGiven        Review[]       @relation("ReviewerReviews")
+  reviewsReceived     Review[]       @relation("RevieweeReviews")
+  favorites           Favorite[]
+  conversations       Conversation[] @relation("UserConversations")
+  messages            Message[]
+  reports             Report[]
+  notifications       Notification[]
+  verificationReq     VerificationRequest?
+}
+
+// ---------------------------------------------------------------------
+// Categories (nested)
+// ---------------------------------------------------------------------
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  icon      String?    // lucide icon name
+  image     String?
+  color     String?    // tailwind gradient token
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  listingCount Int     @default(0)
+  createdAt DateTime   @default(now())
+
+  listings Listing[]
+
+  @@index([parentId])
+}
+
+// ---------------------------------------------------------------------
+// Listings (rental items)
+// ---------------------------------------------------------------------
+model Listing {
+  id               String   @id @default(cuid())
+  ownerId          String
+  owner            User     @relation(fields: [ownerId], references: [id])
+  categoryId       String
+  category         Category @relation(fields: [categoryId], references: [id])
+  title            String
+  slug             String   @unique
+  description      String
+  condition        String   @default("GOOD") // NEW | LIKE_NEW | GOOD | FAIR
+  images           String   // JSON array of URLs
+  brand            String?
+  model            String?
+  city             String
+  address          String?
+  lat              Float?
+  lng              Float?
+
+  // --- Rental pricing (core differentiator vs buy/sell) ---
+  dailyPrice       Float    // base rate
+  weeklyPrice      Float?   // optional discounted weekly rate
+  monthlyPrice     Float?   // optional discounted monthly rate
+  deposit          Float    @default(0) // security deposit
+  minRentalDays    Int      @default(1)
+  maxRentalDays    Int?     // null = unlimited
+
+  // --- Delivery & terms ---
+  deliveryAvailable Boolean @default(false)
+  deliveryFee       Float   @default(0)
+  replacementValue  Float?  // declared value for damage/liability
+
+  // --- Status & moderation ---
+  status            String  @default("ACTIVE") // DRAFT | ACTIVE | RENTED | PAUSED
+  moderationStatus  String  @default("PENDING") // PENDING | APPROVED | REJECTED
+  featured          Boolean @default(false)
+  rejectionReason   String?
+
+  // --- Metrics ---
+  ratingSum   Int @default(0)
+  ratingCount Int @default(0)
+  views       Int @default(0)
+  bookingsCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  availability Availability[]
+  bookings     Booking[]
+  reviews      Review[]
+  favorites    Favorite[]
+  reports      Report[]
+  conversations Conversation[]
+
+  @@index([ownerId])
+  @@index([categoryId])
+  @@index([city])
+  @@index([status])
+  @@index([moderationStatus])
+  @@index([featured])
+}
+
+// ---------------------------------------------------------------------
+// Availability calendar — one row per (listing, day)
+// ---------------------------------------------------------------------
+model Availability {
+  id         String    @id @default(cuid())
+  listingId  String
+  listing    Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  date       DateTime  // normalized to midnight UTC
+  isBlocked  Boolean   @default(true)
+  bookingId  String?
+  booking    Booking?  @relation(fields: [bookingId], references: [id])
+  reason     String?   // booking | maintenance | holiday | owner_block
+  createdAt  DateTime  @default(now())
+
+  @@unique([listingId, date])
+  @@index([listingId])
+}
+
+// ---------------------------------------------------------------------
+// Bookings (rental requests + confirmed rentals)
+// ---------------------------------------------------------------------
+model Booking {
+  id            String   @id @default(cuid())
+  listingId     String
+  listing       Listing  @relation(fields: [listingId], references: [id])
+  renterId      String
+  renter        User     @relation("RenterBookings", fields: [renterId], references: [id])
+  ownerId       String
+  owner         User     @relation("OwnerBookings", fields: [ownerId], references: [id])
+
+  startDate     DateTime
+  endDate       DateTime
+  days          Int
+
+  // --- Pricing snapshot at time of booking ---
+  pricingTier   String   // DAILY | WEEKLY | MONTHLY
+  dailyRate     Float
+  rentalPrice   Float    // days * rate (or tier-adjusted)
+  depositTotal  Float
+  deliveryFee   Float
+  serviceFee    Float
+  discount      Float    @default(0)
+  totalAmount   Float
+
+  message       String?
+  contractSigned Boolean @default(false)
+  deliveryOption String  @default("PICKUP") // PICKUP | DELIVERY
+
+  status        String   @default("PENDING") // PENDING|APPROVED|ACTIVE|COMPLETED|DECLINED|CANCELLED
+  paymentStatus String   @default("PENDING") // PENDING|PAID|REFUNDED|FAILED
+
+  // -------------------------------------------------------------------
+  // Full booking lifecycle (12-step flow) — timestamps & audit fields
+  // -------------------------------------------------------------------
+  adminApprovedAt      DateTime? // step 2: admin reviewed the request
+  adminNote            String?   // admin review note (optional)
+  ownerSignedAt        DateTime? // step 7: owner signed the contract
+  renterSignedAt       DateTime? // step 7: renter signed the contract
+  paidAt               DateTime? // step 8: renter paid (paymentStatus=PAID)
+  deliveredAt          DateTime? // step 10: item delivered (status=ACTIVE)
+  returnedAt           DateTime? // step 11: item returned (status=COMPLETED)
+  returnNote           String?   // step 11: return description
+  returnImages         String?   // step 11: JSON array of image URLs
+  damageNote           String?   // step 12: damage description
+  damageAmount         Float?    // step 12: amount deducted from deposit
+  depositRefundedAt    DateTime? // step 11/12: deposit refunded to renter
+  depositRefundAmount  Float?    // net deposit actually refunded
+  settledAt            DateTime? // step 9: payout sent to owner
+  cancellationReason   String?   // reason when declined/cancelled
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  availability Availability[]
+  review       Review?
+  transactions Transaction[]
+
+  @@index([listingId])
+  @@index([renterId])
+  @@index([ownerId])
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+// ---------------------------------------------------------------------
+// Reviews (listing + user reputation)
+// ---------------------------------------------------------------------
+model Review {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  bookingId  String?  @unique
+  booking    Booking? @relation(fields: [bookingId], references: [id])
+  reviewerId String
+  reviewer   User     @relation("ReviewerReviews", fields: [reviewerId], references: [id])
+  revieweeId String
+  reviewee   User     @relation("RevieweeReviews", fields: [revieweeId], references: [id])
+  rating     Int      // 1-5
+  comment    String
+  createdAt  DateTime @default(now())
+
+  @@index([listingId])
+  @@index([revieweeId])
+}
+
+// ---------------------------------------------------------------------
+// Favorites / watchlist
+// ---------------------------------------------------------------------
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+}
+
+// ---------------------------------------------------------------------
+// Chat (real-time via socket.io mini-service)
+// ---------------------------------------------------------------------
+model Conversation {
+  id            String    @id @default(cuid())
+  listingId     String
+  listing       Listing   @relation(fields: [listingId], references: [id])
+  participantA  String
+  participantB  String
+  participants  User[]    @relation("UserConversations")
+  lastMessage   String?
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+  messages      Message[]
+
+  @@unique([listingId, participantA, participantB])
+  @@index([participantA])
+  @@index([participantB])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  text           String
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+// ---------------------------------------------------------------------
+// Notifications, Reports, Verification (admin + trust)
+// ---------------------------------------------------------------------
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // booking_request | booking_approved | message | system | ...
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reporter    User     @relation(fields: [reporterId], references: [id])
+  listingId   String?
+  listing     Listing? @relation(fields: [listingId], references: [id])
+  reason      String   // spam | scam | inappropriate | duplicate | other
+  description String?
+  status      String   @default("OPEN") // OPEN | RESOLVED | DISMISSED
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+}
+
+model VerificationRequest {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  nationalId  String
+  phone       String
+  documentUrl String?
+  status      String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewerNote String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------
+// Transactions — financial ledger for the rental flow (step 8/9/11/12)
+// RENTAL_PAYMENT  : renter pays rental + service fee + delivery
+// DEPOSIT_HOLD    : deposit collected (held by platform)
+// DEPOSIT_REFUND  : deposit returned to renter (possibly minus damage)
+// DAMAGE_DEDUCTION: damage amount withheld from the deposit
+// OWNER_PAYOUT    : rental money settled to the owner
+// ---------------------------------------------------------------------
+model Transaction {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId     String   // user whose balance this transaction affects
+  type       String   // RENTAL_PAYMENT | DEPOSIT_HOLD | DEPOSIT_REFUND | DAMAGE_DEDUCTION | OWNER_PAYOUT
+  amount     Float    // always positive; direction derived from type
+  status     String   @default("COMPLETED") // PENDING | COMPLETED | FAILED
+  method     String   @default("SIMULATED") // SIMULATED | ZARINPAL | MANUAL
+  reference  String?  // payment gateway reference / tracking code
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([userId])
+  @@index([type])
+}
+
+// ---------------------------------------------------------------------
+// Audit Log — ثبت تمام عملیات حساس برای ردیابی و امنیت
+// ---------------------------------------------------------------------
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?  // کاربر انجام‌دهنده (null برای سیستمی)
+  action      String   // BOOKING_CREATED | BOOKING_APPROVED | LISTING_MODERATED | ...
+  targetType  String   // Booking | Listing | User | Report | ...
+  targetId    String?
+  metadata    String?  // JSON string با جزئیات اضافی
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}
