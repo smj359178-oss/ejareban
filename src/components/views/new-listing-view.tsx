@@ -22,7 +22,7 @@ import { useFetch } from '@/hooks/use-fetch'
 import { CITIES, CONDITION_LABELS } from '@/lib/constants'
 import type { CategoryDTO, ItemCondition } from '@/lib/types'
 import { formatToman } from '@/lib/format'
-import { toPersianDigits } from '@/lib/persian'
+import { toPersianDigits, toEnglishDigits } from '@/lib/persian'
 
 const CONDITIONS: ItemCondition[] = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR']
 
@@ -148,16 +148,23 @@ export function NewListingView() {
       notify('برای ثبت آگهی باید وارد شوید.', 'error')
       return
     }
+
     if (!form.title || !form.categoryId || !form.dailyPrice || !form.deposit) {
       notify('لطفاً همه فیلدهای الزامی را پر کنید', 'error')
       return
     }
+
     if (form.images.length === 0) {
       notify('حداقل یک تصویر آپلود کنید.', 'error')
       return
     }
+
     setSubmitting(true)
+
     try {
+      const toNumber = (value: string | number) =>
+        Number(toEnglishDigits(String(value)))
+
       const r = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -169,31 +176,43 @@ export function NewListingView() {
           brand: form.brand || undefined,
           model: form.model || undefined,
           city: form.city,
-          dailyPrice: Number(form.dailyPrice),
-          weeklyPrice: form.weeklyPrice ? Number(form.weeklyPrice) : undefined,
-          monthlyPrice: form.monthlyPrice ? Number(form.monthlyPrice) : undefined,
-          deposit: Number(form.deposit),
-          minRentalDays: Number(form.minRentalDays),
-          maxRentalDays: Number(form.maxRentalDays) || undefined,
+          dailyPrice: toNumber(form.dailyPrice),
+          weeklyPrice: form.weeklyPrice
+            ? toNumber(form.weeklyPrice)
+            : undefined,
+          monthlyPrice: form.monthlyPrice
+            ? toNumber(form.monthlyPrice)
+            : undefined,
+          deposit: toNumber(form.deposit),
+          minRentalDays: toNumber(form.minRentalDays),
+          maxRentalDays: form.maxRentalDays
+            ? toNumber(form.maxRentalDays) || undefined
+            : undefined,
           deliveryAvailable: form.deliveryAvailable,
-          deliveryFee: Number(form.deliveryFee),
+          deliveryFee: form.deliveryAvailable
+            ? toNumber(form.deliveryFee || 0)
+            : 0,
           images: form.images,
         }),
       })
+
       const data = await r.json()
+
       if (!r.ok) {
+        console.error('Listing validation error:', data)
         notify(data?.error ?? 'ثبت آگهی ناموفق بود', 'error')
         return
       }
+
       notify('آگهی ثبت شد! در صف تأیید مدیر قرار گرفت.', 'success')
       go({ name: 'dashboard', tab: 'listings' })
-    } catch {
+    } catch (error) {
+      console.error('Submit error:', error)
       notify('اتصال به سرور ناموفق بود', 'error')
     } finally {
       setSubmitting(false)
     }
   }
-
   const weeklyDiscount =
     form.dailyPrice && form.weeklyPrice
       ? Math.max(

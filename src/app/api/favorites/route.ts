@@ -48,6 +48,15 @@ export async function POST(req: Request) {
   if (!listingId) {
     return NextResponse.json({ error: 'شناسه آگهی الزامی است.' }, { status: 400 })
   }
+  // The favorite FK would reject an unknown listing with a raw 500 (B12);
+  // validate first so the client gets a clean 404.
+  const listing = await db.listing.findUnique({
+    where: { id: listingId },
+    select: { id: true },
+  })
+  if (!listing) {
+    return NextResponse.json({ error: 'آگهی مورد نظر یافت نشد.' }, { status: 404 })
+  }
   await db.favorite.upsert({
     where: { userId_listingId: { userId: user.id, listingId } },
     create: { userId: user.id, listingId },

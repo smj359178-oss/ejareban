@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -52,3 +53,12 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Local runtime data — never publish the SQLite database (contains user
+# data and password hashes), dev server pid files, or agent tool dumps.
+db/
+.zscripts/dev.pid
+tool-results/
+
+# The project is bun-based (bun.lock is tracked); npm lockfiles are noise.
+package-lock.json

@@ -44,7 +44,9 @@ export async function POST(
   }
 
   const body = await readJson(req)
-  const accept = body.accept !== false
+  // Require an explicit acceptance — an empty body must not count as a
+  // signature (B14).
+  const accept = body.accept === true
   if (!accept) {
     return NextResponse.json(
       { error: 'برای امضا باید شرایط قرارداد را بپذیرید.' },
@@ -76,9 +78,18 @@ export async function POST(
   }
 
   const updated = await db.$transaction(async (tx) => {
-    const u = await tx.booking.update({
+    // Atomic guard (B14): the updateMany below flips the party's flag from
+    // null → now only once. Concurrent duplicate requests get count 0 and
+    // cannot stamp the signature twice or double-notify.
+    const cond = isOwner
+      ? { id, ownerSignedAt: null }
+      : { id, renterSignedAt: null }
+    const res = await tx.booking.updateMany({ where: cond, data })
+    if (res.count === 0) {
+      throw new Error('ALREADY_SIGNED')
+    }
+    const u = await tx.booking.findUniqueOrThrow({
       where: { id },
-      data,
       include: { listing: true, renter: true, owner: true },
     })
     // Flip the flag inside the same transaction when both signatures exist.
@@ -91,7 +102,21 @@ export async function POST(
       })
     }
     return u
-  }, { timeout: 20000 })
+  }, { timeout: 20000 }).catch((e: unknown) => {
+    if (e instanceof Error && e.message === 'ALREADY_SIGNED') {
+      return NextResponse.json(
+        { error: 'شما قبلاً این قرارداد را امضا کرده‌اید.' },
+        { status: 400 },
+      )
+    }
+    throw e
+  })
+
+  // The transaction may have returned a NextResponse (duplicate signature);
+  // short-circuit before touching notifications/audit.
+  if (updated instanceof NextResponse) {
+    return updated
+  }
 
   await db.auditLog.create({
     data: {

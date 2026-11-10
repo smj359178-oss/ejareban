@@ -463,7 +463,7 @@ export function ListingView({ slug }: { slug: string }) {
                 <TrustSeal
                   levels={computeVerificationLevels({
                     isIdentityVerified: listing.owner.isIdentityVerified,
-                    isPhoneVerified: true,
+                    isPhoneVerified: listing.owner.isPhoneVerified,
                     ratingCount: listing.owner.ratingCount,
                     rating: listing.owner.rating,
                     bookingsCount: listing.bookingsCount,
@@ -474,7 +474,7 @@ export function ListingView({ slug }: { slug: string }) {
                 <VerificationBadges
                   levels={computeVerificationLevels({
                     isIdentityVerified: listing.owner.isIdentityVerified,
-                    isPhoneVerified: true,
+                    isPhoneVerified: listing.owner.isPhoneVerified,
                     ratingCount: listing.owner.ratingCount,
                     rating: listing.owner.rating,
                     bookingsCount: listing.bookingsCount,

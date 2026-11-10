@@ -69,6 +69,7 @@ export function useChat(
   userId: string | null,
   senderName?: string | null,
   senderAvatar?: string | null,
+  active = true,
 ) {
   const [messages, setMessages] = React.useState<ChatMessageDTO[]>([])
   const [pending, setPending] = React.useState<PendingMessage[]>([])
@@ -96,6 +97,14 @@ export function useChat(
   React.useEffect(() => {
     senderAvatarRef.current = senderAvatar
   }, [senderAvatar])
+
+  // B6 — polling must only run while the panel is actually open: the GET
+  // endpoint marks inbound messages as read, so polling while closed would
+  // silently clear unread badges for messages the user never saw.
+  const activeRef = React.useRef(active)
+  React.useEffect(() => {
+    activeRef.current = active
+  }, [active])
 
   // Unsent messages (pending + failed) are stored per conversation so that
   // switching conversations never drops them; only the active conversation's
@@ -143,12 +152,17 @@ export function useChat(
     const box = outboxRef.current.get(conversationId)
     setPending(box?.pending ?? [])
     setFailed(box?.failed ?? [])
-    void fetchMessages(conversationId)
+    // Fetch immediately only while the panel is open; a closed panel must
+    // not mark the conversation as read (B6).
+    if (activeRef.current) void fetchMessages(conversationId)
   }, [conversationId, fetchMessages])
 
-  // One interval per open conversation; paused while the tab is hidden.
+  // One interval per open conversation; runs only while the panel is open
+  // (B6) and pauses while the tab is hidden.
   React.useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId || !active) return
+    // Catch up immediately when the panel opens.
+    void fetchMessages(conversationId)
     intervalRef.current = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return
       void fetchMessages(conversationId)
@@ -165,7 +179,7 @@ export function useChat(
       }
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [conversationId, fetchMessages])
+  }, [conversationId, active, fetchMessages])
 
   // -------- POST one pending item; on failure park it in `failed` --------
   const postPending = React.useCallback(

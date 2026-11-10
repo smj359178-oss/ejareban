@@ -21,9 +21,8 @@ import { useSession } from '@/hooks/use-session'
  * 8-attempt lockout so users understand what is happening instead of feeling
  * hacked.
  *
- * Demo credentials are shown as a hint so the seeded accounts are easy to
- * discover during local development. Remove the hint block before shipping
- * to production.
+ * Demo credentials are shown ONLY in development (NODE_ENV check is inlined
+ * by Next.js at build time, so production bundles never contain them).
  */
 export default function LoginPage() {
   const router = useRouter()
@@ -136,14 +135,16 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-          <div className="mb-1 font-semibold">حساب‌های پیش‌فرض (توسعه محلی):</div>
-          <ul className="space-y-1 leading-6" dir="ltr">
-            <li>admin / ejareban-admin</li>
-            <li>renter / renter123</li>
-            <li>amir / amir123</li>
-          </ul>
-        </div>
+        {process.env.NODE_ENV === 'development' && (
+          <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+            <div className="mb-1 font-semibold">حساب‌های پیش‌فرض (توسعه محلی):</div>
+            <ul className="space-y-1 leading-6" dir="ltr">
+              <li>admin / ejareban-admin</li>
+              <li>renter / renter123</li>
+              <li>amir / amir123</li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   )

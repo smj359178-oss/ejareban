@@ -47,6 +47,11 @@ export function BookingCalendar({ listing }: Props) {
         if (!alive) return
         setBlocked(new Set<string>(d.blockedDates || []))
       })
+      .catch(() => {
+        // A failed fetch must not look like "everything is free"; the
+        // server-side conflict check remains the source of truth.
+        if (alive) setBlocked(new Set())
+      })
       .finally(() => alive && setLoading(false))
     return () => {
       alive = false
@@ -182,6 +187,10 @@ export function BookingCalendar({ listing }: Props) {
           onSelect={setRange}
           numberOfMonths={1}
           disabled={disabled}
+          // B5 — without excludeDisabled, react-day-picker lets a range span
+          // blocked (disabled) days; those nights were then rejected only on
+          // the server, after the user believed the selection was valid.
+          excludeDisabled
           showOutsideDays
           className="mx-auto"
         />

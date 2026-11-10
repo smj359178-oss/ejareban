@@ -76,6 +76,7 @@ export function mapListing(
         rating: 0,
         ratingCount: l.owner.ratingCount,
         isIdentityVerified: l.owner.isIdentityVerified,
+        isPhoneVerified: l.owner.isPhoneVerified,
         createdAt: l.owner.createdAt.toISOString(),
       }
     : {
@@ -86,6 +87,7 @@ export function mapListing(
         rating: rating(l.owner.ratingSum, l.owner.ratingCount),
         ratingCount: l.owner.ratingCount,
         isIdentityVerified: l.owner.isIdentityVerified,
+        isPhoneVerified: l.owner.isPhoneVerified,
         createdAt: l.owner.createdAt.toISOString(),
       }
 

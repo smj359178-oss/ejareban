@@ -131,6 +131,23 @@ export async function POST(req: Request) {
         if (conflicts) {
           throw new Error('CONFLICT')
         }
+        // B5 — the calendar blocks owner-blocked/maintenance days, but the
+        // server never re-checked them, so a forged/raced request could book
+        // those nights. Mirror the availability endpoint: any blocked day in
+        // the range rejects the request.
+        const blockedDay = await tx.availability.findFirst({
+          where: {
+            listingId,
+            isBlocked: true,
+            date: {
+              in: daysToCheck.map((d) => new Date(`${d}T00:00:00.000Z`)),
+            },
+          },
+          select: { id: true },
+        })
+        if (blockedDay) {
+          throw new Error('BLOCKED')
+        }
         // Create the booking inside the same transaction + keep the
         // listing's bookingsCount honest (B7 — the counter used to never
         // update because it was never touched anywhere).
@@ -172,6 +189,12 @@ export async function POST(req: Request) {
     if (e instanceof Error && e.message === 'CONFLICT') {
       return NextResponse.json(
         { error: 'تاریخ‌های انتخاب‌شده با رزرو موجود هم‌پوشانی دارند. لطفاً تاریخ دیگری انتخاب کنید.' },
+        { status: 409 },
+      )
+    }
+    if (e instanceof Error && e.message === 'BLOCKED') {
+      return NextResponse.json(
+        { error: 'برخی از روزهای انتخاب‌شده توسط مالک مسدود شده است. لطفاً تاریخ دیگری انتخاب کنید.' },
         { status: 409 },
       )
     }

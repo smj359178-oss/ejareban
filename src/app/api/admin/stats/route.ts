@@ -32,8 +32,12 @@ export async function GET(req: Request) {
     db.listing.count({ where: { status: 'ACTIVE', moderationStatus: 'APPROVED' } }),
     db.booking.count(),
     db.booking.count({ where: { status: 'PENDING' } }),
-    db.booking.aggregate({
-      where: { paymentStatus: 'PAID' },
+    // Net money math (B8): REFUNDED bookings were paid and then reimbursed,
+    // so their fees must be subtracted from the PAID totals. Counting only
+    // PAID would overstate revenue after any refund.
+    db.booking.groupBy({
+      by: ['paymentStatus'],
+      where: { paymentStatus: { in: ['PAID', 'REFUNDED'] } },
       _sum: { rentalPrice: true, serviceFee: true },
     }),
     db.report.count({ where: { status: 'OPEN' } }),
@@ -44,6 +48,13 @@ export async function GET(req: Request) {
       include: { listing: true, renter: true },
     }),
   ])
+
+  const paidRow = revenueRows.find((r) => r.paymentStatus === 'PAID')
+  const refundedRow = revenueRows.find((r) => r.paymentStatus === 'REFUNDED')
+  const platformRevenue =
+    (paidRow?._sum.serviceFee ?? 0) - (refundedRow?._sum.serviceFee ?? 0)
+  const gmv =
+    (paidRow?._sum.rentalPrice ?? 0) - (refundedRow?._sum.rentalPrice ?? 0)
 
   return NextResponse.json({
     stats: {
@@ -56,8 +67,8 @@ export async function GET(req: Request) {
       pendingBookings,
       openReports,
       pendingVerifications,
-      platformRevenue: revenueRows._sum.serviceFee || 0,
-      gmv: revenueRows._sum.rentalPrice || 0,
+      platformRevenue,
+      gmv,
     },
     recentBookings: recentBookings.map((b) => ({
       id: b.id,

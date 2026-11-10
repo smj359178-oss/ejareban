@@ -107,6 +107,7 @@ export interface ListingDTO {
     rating: number
     ratingCount: number
     isIdentityVerified: boolean
+    isPhoneVerified: boolean
     createdAt: string
   }
 }

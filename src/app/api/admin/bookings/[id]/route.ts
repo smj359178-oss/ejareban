@@ -115,6 +115,18 @@ export async function PATCH(
         { status: 400 },
       )
     }
+    // A PAID booking holds real money — refund first (support/gateway), then
+    // cancel. Otherwise the dates get released while the payment stays with
+    // the owner (B7-9).
+    if (booking.paymentStatus === 'PAID') {
+      return NextResponse.json(
+        {
+          error:
+            'این رزرو پرداخت شده است. ابتدا فرآیند استرداد وجه را انجام دهید، سپس لغو کنید.',
+        },
+        { status: 409 },
+      )
+    }
 
     const updated = await db.$transaction(async (tx) => {
       const u = await tx.booking.update({

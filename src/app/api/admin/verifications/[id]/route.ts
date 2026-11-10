@@ -30,6 +30,14 @@ export async function PATCH(
   if (!verification) {
     return NextResponse.json({ error: 'درخواست مورد نظر یافت نشد.' }, { status: 404 })
   }
+  // Re-approving an already-approved request must not re-apply the trust
+  // bonus (B13).
+  if (verification.status === 'APPROVED' && status === 'APPROVED') {
+    return NextResponse.json(
+      { error: 'این درخواست قبلاً تأیید شده است.' },
+      { status: 400 },
+    )
+  }
   await db.verificationRequest.update({
     where: { id },
     data: { status, reviewerNote: body.note ?? null },
@@ -39,7 +47,8 @@ export async function PATCH(
       where: { id: verification.userId },
       data: {
         isIdentityVerified: true,
-        trustScore: { increment: 15 },
+        // Clamp at 100 so repeated bonuses cannot inflate the score (B13).
+        trustScore: Math.min(100, verification.user.trustScore + 15),
       },
     })
     await db.notification.create({

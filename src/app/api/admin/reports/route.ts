@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import { assertSameOrigin } from '@/lib/http'
+import { parseImages } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,9 @@ export async function GET(req: Request) {
             id: r.listing.id,
             title: r.listing.title,
             slug: r.listing.slug,
-            images: JSON.parse(r.listing.images || '[]'),
+            // parseImages never throws on malformed JSON (B11), unlike the
+            // raw JSON.parse that 500'd the whole admin reports page.
+            images: parseImages(r.listing.images),
           }
         : null,
     })),

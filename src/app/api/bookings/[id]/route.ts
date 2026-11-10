@@ -112,6 +112,22 @@ export async function PATCH(
     )
   }
 
+  // --- Gate 3: a PAID booking must not be cancelled/declined silently ---
+  // The money has moved; cancelling here would release the dates while the
+  // owner still holds the payment. Refunds go through support (B7-9).
+  if (
+    (nextStatus === 'DECLINED' || nextStatus === 'CANCELLED') &&
+    booking.paymentStatus === 'PAID'
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          'این رزرو پرداخت شده است و لغو یا رد مستقیم آن ممکن نیست. برای استرداد وجه با پشتیبانی اجاره‌بان تماس بگیرید.',
+      },
+      { status: 409 },
+    )
+  }
+
   const now = new Date()
   const updated = await db.$transaction(async (tx) => {
     const data: Prisma.BookingUpdateInput = { status: nextStatus }

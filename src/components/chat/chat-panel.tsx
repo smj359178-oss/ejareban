@@ -65,6 +65,7 @@ export function ChatPanel({ open, onOpenChange, conversation }: ChatPanelProps) 
     user?.id ?? null,
     user?.name,
     user?.avatar ?? null,
+    open,
   )
   const [text, setText] = React.useState('')
   const scrollRef = React.useRef<HTMLDivElement>(null)

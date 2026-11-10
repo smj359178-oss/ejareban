@@ -34,15 +34,37 @@ export interface SessionUser {
 
 /**
  * Server-side session secret. In production ALWAYS set SESSION_SECRET in the
- * environment (see .env.example). The fallback below exists only so the dev
- * sandbox / fresh clones keep working out of the box; it is deterministic
- * and therefore NOT safe for production use.
+ * environment (deployment scripts / secret manager). The dev fallback below
+ * exists only so `next dev` works out of the box; it is deterministic and
+ * therefore NOT safe for production use — so `getSessionSecret()` refuses to
+ * run without an explicit secret when NODE_ENV=production.
  */
 const DEV_FALLBACK_SESSION_SECRET =
   'ejareban-dev-only-session-secret-do-not-use-in-production'
 
+let cachedSecret: string | null = null
+
 function getSessionSecret(): string {
-  return process.env.SESSION_SECRET || DEV_FALLBACK_SESSION_SECRET
+  if (cachedSecret) return cachedSecret
+
+  const fromEnv = process.env.SESSION_SECRET
+  if (fromEnv && fromEnv.length >= 32) {
+    cachedSecret = fromEnv
+    return cachedSecret
+  }
+
+  // In production a missing/weak secret is a fatal misconfiguration: silently
+  // signing tokens with a public constant would let anyone forge a session.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'SESSION_SECRET is not set (or shorter than 32 chars). ' +
+        'Set a strong random secret in the deployment environment.',
+    )
+  }
+
+  // Development only — deterministic fallback so fresh clones run out of the box.
+  cachedSecret = DEV_FALLBACK_SESSION_SECRET
+  return cachedSecret
 }
 
 /** Build the signed session token for a user id. */

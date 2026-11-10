@@ -44,6 +44,13 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // The contract PDF route loads Persian fonts from string-concatenated
+  // paths, which the nft file tracer cannot resolve on its own. The explicit
+  // glob below bundles the TTFs into the standalone/serverless output so the
+  // route keeps working in production (and on Vercel).
+  outputFileTracingIncludes: {
+    "/api/bookings/[id]/contract": ["./public/fonts/*.ttf"],
+  },
   reactStrictMode: false,
   images: {
     // Remote hosts whose images we proxy through next/image. Local uploads live
