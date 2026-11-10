@@ -1,9 +1,9 @@
 // =====================================================================
 // Ejareban — Rental Marketplace Data Model
-// Engine: SQLite (MVP) — designed to migrate to PostgreSQL unchanged.
-// Note: SQLite cannot store lists; multi-value fields use a JSON-encoded
-//       String and are parsed in the data layer (see src/lib/types.ts).
-//       Status fields use String + exported constants (src/lib/constants.ts)
+// Engine: PostgreSQL (Neon serverless, provisioned via Vercel).
+// Note: Multi-value fields intentionally use a JSON-encoded String and
+//       are parsed in the data layer (see src/lib/types.ts), and status
+//       fields use String + exported constants (src/lib/constants.ts),
 //       for maximum cross-engine portability.
 // =====================================================================
 
@@ -12,7 +12,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
