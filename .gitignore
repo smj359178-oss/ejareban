@@ -62,3 +62,5 @@ tool-results/
 
 # The project is bun-based (bun.lock is tracked); npm lockfiles are noise.
 package-lock.json
+.vercel
+.env*
