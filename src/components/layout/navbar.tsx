@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import {
   Search,
   Moon,
@@ -43,6 +43,7 @@ import { useChatStore } from '@/lib/chat-store'
 import { useSession } from '@/hooks/use-session'
 import { useChatInbox } from '@/hooks/use-chat-inbox'
 import { NotificationBell } from '@/components/shared/notification-bell'
+import { BrandMark } from '@/components/shared/brand-mark'
 import { toPersianDigits } from '@/lib/persian'
 
 const NAV_CATEGORIES = [
@@ -54,16 +55,22 @@ const NAV_CATEGORIES = [
   { slug: 'vehicles', label: 'وسایل نقلیه' },
 ]
 
+const emptySubscribe = () => () => {}
+
 export function Navbar() {
   const { go, view, notify } = useNav()
   const { theme, setTheme } = useTheme()
   const { user, loading, logout } = useSession()
+  const router = useRouter()
   const openInbox = useChatStore((s) => s.openInbox)
   const { unread } = useChatInbox(user?.id)
   const [q, setQ] = React.useState('')
   const [mobileOpen, setMobileOpen] = React.useState(false)
-  const [mounted, setMounted] = React.useState(false)
-  React.useEffect(() => setMounted(true), [])
+  const mounted = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  )
 
   function submitSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -79,27 +86,58 @@ export function Navbar() {
     }
     if (loading) return
     notify(message, 'info')
-    window.location.href = '/login'
+    router.push('/login')
   }
 
   const roleLabel = (r?: string) =>
     r === 'ADMIN' ? 'مدیر' : r === 'OWNER' ? 'مالک' : 'اجاره‌گیرنده'
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-3">
         {/* Mobile menu */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden" aria-label="منو">
+            <Button variant="ghost" size="icon" className="shrink-0 rounded-full md:hidden" aria-label="منو">
               <Menu className="size-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-72">
             <SheetHeader>
-              <SheetTitle>دسته‌بندی‌ها</SheetTitle>
+              <SheetTitle className="flex items-center gap-2">
+                <BrandMark className="size-7" />
+                دسته‌بندی‌ها
+              </SheetTitle>
             </SheetHeader>
-            <nav className="mt-4 flex flex-col gap-1">
+            <div className="mt-4 flex flex-col gap-2">
+              <Button
+                className="w-full justify-between rounded-xl"
+                onClick={() => {
+                  go({ name: 'new-listing' })
+                  setMobileOpen(false)
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <Plus className="size-4" /> ثبت آگهی
+                </span>
+                <span aria-hidden="true">←</span>
+              </Button>
+              {!user && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline" asChild>
+                    <Link href="/login" onClick={() => setMobileOpen(false)}>
+                      <LogIn className="size-4" /> ورود
+                    </Link>
+                  </Button>
+                  <Button variant="secondary" asChild>
+                    <Link href="/register" onClick={() => setMobileOpen(false)}>
+                      <UserPlus className="size-4" /> ثبت‌نام
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+            <nav className="mt-4 flex flex-col gap-1 border-t pt-4">
               {NAV_CATEGORIES.map((c) => (
                 <button
                   key={c.slug}
@@ -107,7 +145,7 @@ export function Navbar() {
                     go({ name: 'browse', categorySlug: c.slug })
                     setMobileOpen(false)
                   }}
-                  className="rounded-md px-3 py-2 text-right text-sm font-medium hover:bg-muted"
+                  className="rounded-lg px-3 py-2 text-right text-sm font-medium transition-colors hover:bg-muted"
                 >
                   {c.label}
                 </button>
@@ -163,77 +201,93 @@ export function Navbar() {
         {/* Logo */}
         <button
           onClick={() => go({ name: 'home' })}
-          className="flex items-center gap-2"
+          className="flex shrink-0 items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           aria-label="خانه اجاره‌بان"
         >
-          <Image
-            src="/brand/logo-mark.png"
-            alt="اجاره‌بان"
-            width={36}
-            height={36}
-            className="size-9 rounded-xl shadow-sm"
-          />
-          <span className="hidden text-lg font-bold tracking-tight sm:block">
+          <BrandMark className="size-9 shadow-sm sm:size-10" />
+          <span className="hidden text-xl font-extrabold tracking-tight sm:block">
             اجاره‌بان
           </span>
         </button>
 
-        {/* Search */}
-        <form onSubmit={submitSearch} className="relative flex-1 max-w-xl">
-          <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="جستجوی لپ‌تاپ، دوربین، ابزار…"
-            className="h-10 rounded-full pr-9 pl-4"
-          />
-        </form>
+        {/* Center: primary navigation on home/browse, search elsewhere */}
+        {view.name === 'home' || view.name === 'browse' ? (
+          <nav className="mx-auto hidden flex-1 items-center justify-center gap-1 lg:flex">
+            <button
+              onClick={() => go({ name: 'home' })}
+              className={cn(
+                'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                view.name === 'home'
+                  ? 'bg-primary/10 font-semibold text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              خانه
+            </button>
+            <button
+              onClick={() => go({ name: 'browse' })}
+              className={cn(
+                'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
+                view.name === 'browse' &&
+                  !('categorySlug' in view && view.categorySlug)
+                  ? 'bg-primary/10 font-semibold text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              همه آگهی‌ها
+            </button>
+            <button
+              onClick={() =>
+                requireLogin('برای مشاهدهٔ داشبورد ابتدا وارد شوید.', () =>
+                  go({ name: 'dashboard' }),
+                )
+              }
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              داشبورد
+            </button>
+          </nav>
+        ) : (
+          <form
+            onSubmit={submitSearch}
+            className="relative mx-auto hidden w-full max-w-md flex-1 md:block"
+          >
+            <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="جستجو در آگهی‌ها…"
+              className="h-10 rounded-full border-transparent bg-muted/60 pr-9 pl-4 focus-visible:border-ring focus-visible:bg-background"
+            />
+          </form>
+        )}
 
         {/* Desktop actions */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-0.5 md:flex">
           <NotificationBell />
           <Button
             variant="ghost"
-            size="sm"
-            className="relative"
+            size="icon"
+            className="relative rounded-full"
             onClick={() =>
               requireLogin('برای مشاهدهٔ پیام‌ها ابتدا وارد شوید.', openInbox)
             }
             aria-label="پیام‌ها"
           >
-            <MessageSquare className="size-4" /> پیام‌ها
+            <MessageSquare className="size-4" />
             {unread > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-semibold leading-4 text-white">
+              <span className="absolute -left-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-semibold leading-4 text-white">
                 {toPersianDigits(unread > 9 ? '۹+' : unread)}
               </span>
             )}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              requireLogin('برای مشاهدهٔ داشبورد ابتدا وارد شوید.', () =>
-                go({ name: 'dashboard' }),
-              )
-            }
-          >
-            <LayoutDashboard className="size-4" /> داشبورد
-          </Button>
-          {user?.role === 'ADMIN' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => go({ name: 'admin' })}
-            >
-              <Shield className="size-4" /> مدیریت
-            </Button>
-          )}
         </div>
 
         {/* Theme toggle */}
         <Button
           variant="ghost"
           size="icon"
+          className="rounded-full"
           aria-label="تغییر تم"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
         >
@@ -247,7 +301,7 @@ export function Navbar() {
         {/* List item */}
         <Button
           size="sm"
-          className="hidden sm:inline-flex"
+          className="hidden rounded-full px-4 shadow-sm sm:inline-flex"
           onClick={() => go({ name: 'new-listing' })}
         >
           <Plus className="size-4" /> ثبت آگهی
@@ -256,14 +310,26 @@ export function Navbar() {
         {/* Account / session */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full" aria-label="حساب کاربری">
-              <Avatar className="size-9">
-                <AvatarImage src={user?.avatar || undefined} alt={user?.name || ''} />
-                <AvatarFallback>
-                  <UserRound className="size-4" />
-                </AvatarFallback>
-              </Avatar>
-            </Button>
+            {user ? (
+              <Button variant="ghost" size="icon" className="rounded-full" aria-label="حساب کاربری">
+                <Avatar className="size-9">
+                  <AvatarImage src={user.avatar || undefined} alt={user.name || ''} />
+                  <AvatarFallback>
+                    <UserRound className="size-4" />
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5 rounded-full px-3"
+                aria-label="ورود یا ثبت‌نام"
+              >
+                <UserRound className="size-4" />
+                <span className="hidden sm:inline">ورود</span>
+              </Button>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60" sideOffset={8}>
             <DropdownMenuLabel className="flex flex-col gap-1">

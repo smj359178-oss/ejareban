@@ -105,39 +105,48 @@ export function HomeView() {
           <div className="absolute inset-0 bg-gradient-to-l from-background via-background/90 to-background/40" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/30" />
         </div>
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 lg:grid-cols-2 lg:py-24">
+        <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-14 lg:grid-cols-2 lg:gap-12 lg:py-20">
           <div className="flex flex-col justify-center">
-            <Badge variant="secondary" className="mb-4 w-fit gap-1 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900">
+            <Badge variant="secondary" className="mb-3 w-fit gap-1 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900">
               <Sparkles className="size-3.5 text-primary" />
-              بانای اجارهٔ شما · امن، سریع، قابل اعتماد
+              همراه اجارهٔ شما · امن، سریع، قابل اعتماد
             </Badge>
-            <h1 className="text-balance text-4xl font-black leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="max-w-xl text-balance text-4xl font-black leading-[1.12] tracking-tight sm:text-5xl lg:text-6xl">
               اجاره امن،
               <br />
               <span className="bg-gradient-to-l from-primary to-emerald-600 bg-clip-text text-transparent">
                 هر چیزی، هر کجا.
               </span>
             </h1>
-            <p className="mt-5 max-w-lg text-balance text-base text-muted-foreground sm:text-lg text-pretty-fa">
+            <p className="mt-4 max-w-lg text-balance text-base text-muted-foreground sm:text-lg text-pretty-fa">
               لپ‌تاپ، دوربین، ابزار، تجهیزات رویداد و بیشتر — روزانه، هفتگی یا
               ماهانه. مالکان با تأیید هویت چندسطحی، ودیعه امن بیمه‌شده و تقویم
               رزرو زنده.
             </p>
-            <form onSubmit={search} className="mt-7 flex max-w-md gap-2">
+            <form onSubmit={search} className="mt-6 flex max-w-lg flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="چه چیزی می‌خواهید اجاره کنید؟"
-                  className="h-12 rounded-xl pr-10 shadow-lg"
+                  className="h-12 rounded-xl border-transparent bg-background/80 pr-10 shadow-lg backdrop-blur focus-visible:bg-background"
                 />
               </div>
-              <Button type="submit" size="lg" className="h-12 rounded-xl px-6 shadow-lg">
+              <Button type="submit" size="lg" className="h-12 w-full rounded-xl px-6 shadow-lg sm:w-auto">
                 جستجو
               </Button>
             </form>
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+              <span>صاحب وسیله‌ای هستید؟</span>
+              <button
+                onClick={() => go({ name: 'new-listing' })}
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                آگهی خود را ثبت کنید
+              </button>
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" /> ودیعه بیمه‌شده
               </span>
@@ -174,7 +183,7 @@ export function HomeView() {
                       />
                     )}
                     <Badge className="absolute right-2 top-2 bg-primary text-primary-foreground">
-                      {formatTomanCompact(l.dailyPrice)}/روز
+                      {formatTomanCompact(l.dailyPrice)}/ روز
                     </Badge>
                   </div>
                   <div className="p-2.5">
@@ -194,8 +203,8 @@ export function HomeView() {
       </section>
 
       {/* Categories */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-12">
-        <div className="mb-6 flex items-end justify-between">
+      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-12">
+        <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">
               مرور بر اساس دسته
@@ -208,17 +217,17 @@ export function HomeView() {
             variant="ghost"
             size="sm"
             onClick={() => go({ name: 'browse' })}
-            className="gap-1"
+            className="shrink-0 gap-1"
           >
             مشاهده همه <ArrowLeft className="size-4 rtl-flip" />
           </Button>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
           {categories.map((c) => (
             <button
               key={c.id}
               onClick={() => go({ name: 'browse', categorySlug: c.slug })}
-              className="group relative overflow-hidden rounded-2xl border bg-card p-4 text-right transition-all hover:-translate-y-0.5 hover:shadow-md"
+              className="group relative flex min-h-[8.5rem] flex-col items-start overflow-hidden rounded-2xl border bg-card p-4 text-right transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
             >
               <div
                 className={cn(
@@ -229,7 +238,7 @@ export function HomeView() {
                 <CategoryIcon name={c.icon} className="size-6" />
               </div>
               <div className="text-sm font-semibold text-pretty-fa">{c.name}</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="mt-auto pt-1 text-xs text-muted-foreground">
                 {toPersianDigits(c.listingCount)} آیتم
               </div>
             </button>
@@ -238,8 +247,8 @@ export function HomeView() {
       </section>
 
       {/* Featured rentals */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-8">
-        <div className="mb-6 flex items-end justify-between">
+      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-12">
+        <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
               <TrendingUp className="size-6 text-primary" />
@@ -253,7 +262,7 @@ export function HomeView() {
             variant="ghost"
             size="sm"
             onClick={() => go({ name: 'browse' })}
-            className="gap-1"
+            className="shrink-0 gap-1"
           >
             مشاهده همه <ArrowLeft className="size-4 rtl-flip" />
           </Button>
@@ -295,8 +304,8 @@ export function HomeView() {
       </section>
 
       {/* Budget picks */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-12">
-        <div className="mb-6 flex items-end justify-between">
+      <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-12">
+        <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">پیشنهاد اقتصادی</h2>
             <p className="text-sm text-muted-foreground">
@@ -313,13 +322,13 @@ export function HomeView() {
 
       {/* Trust / verification band */}
       <section className="border-t bg-gradient-to-br from-primary/5 via-background to-emerald-500/5">
-        <div className="mx-auto max-w-7xl px-4 py-14">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:py-16">
           <div className="grid items-center gap-10 lg:grid-cols-2">
             <div>
               <Badge className="mb-3 gap-1 bg-emerald-600 text-white hover:bg-emerald-600">
                 <ShieldCheck className="size-3.5" /> اعتماد و امنیت
               </Badge>
-              <h2 className="text-balance text-3xl font-bold tracking-tight text-pretty-fa">
+              <h2 className="text-balance text-2xl font-bold tracking-tight text-pretty-fa sm:text-3xl">
                 مالکان تأییدشده. ودیعه امن. نظرات واقعی.
               </h2>
               <p className="mt-4 text-muted-foreground text-pretty-fa">
@@ -359,8 +368,8 @@ export function HomeView() {
                   }))
               ).map((s) => (
                 <Card key={s.label} className="text-center">
-                  <CardContent className="p-6">
-                    <div className="text-3xl font-black tracking-tight text-primary">
+                  <CardContent className="p-5 sm:p-6">
+                    <div className="text-2xl font-black tracking-tight text-primary sm:text-3xl">
                       {s.value}
                     </div>
                     <div className="mt-1 text-sm text-muted-foreground">

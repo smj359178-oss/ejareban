@@ -1,7 +1,7 @@
 'use client'
 
-import Image from 'next/image'
 import { ShieldCheck, Headset, BadgeCheck, Truck } from 'lucide-react'
+import { BrandMark } from '@/components/shared/brand-mark'
 import { useNav } from '@/lib/store'
 
 const TRUST = [
@@ -14,22 +14,16 @@ const TRUST = [
 export function Footer() {
   const go = useNav((s) => s.go)
   return (
-    <footer className="mt-auto border-t bg-card">
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        <div className="grid gap-8 md:grid-cols-4">
-          <div className="md:col-span-1">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/brand/logo-mark.png"
-                alt="اجاره‌بان"
-                width={32}
-                height={32}
-                className="size-8 rounded-lg"
-              />
-              <span className="text-lg font-bold tracking-tight">اجاره‌بان</span>
+    <footer className="mt-auto border-t bg-card/60">
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <BrandMark className="size-9" />
+              <span className="text-xl font-extrabold tracking-tight">اجاره‌بان</span>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground text-pretty-fa">
-              بانای اجارهٔ شما. پلتفرم امن اجاره در ایران.
+            <p className="mt-3 max-w-xs text-sm leading-6 text-muted-foreground text-pretty-fa">
+              همراه اجارهٔ شما؛ پلتفرم امن اجاره در ایران.
             </p>
           </div>
 
@@ -37,22 +31,22 @@ export function Footer() {
             <h4 className="mb-3 text-sm font-semibold">کاوش</h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <button onClick={() => go({ name: 'browse' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'browse' })} className="transition-colors hover:text-primary">
                   همه آگهی‌ها
                 </button>
               </li>
               <li>
-                <button onClick={() => go({ name: 'browse', categorySlug: 'electronics' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'browse', categorySlug: 'electronics' })} className="transition-colors hover:text-primary">
                   الکترونیک
                 </button>
               </li>
               <li>
-                <button onClick={() => go({ name: 'browse', categorySlug: 'cameras' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'browse', categorySlug: 'cameras' })} className="transition-colors hover:text-primary">
                   دوربین
                 </button>
               </li>
               <li>
-                <button onClick={() => go({ name: 'browse', categorySlug: 'tools' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'browse', categorySlug: 'tools' })} className="transition-colors hover:text-primary">
                   ابزار
                 </button>
               </li>
@@ -63,22 +57,22 @@ export function Footer() {
             <h4 className="mb-3 text-sm font-semibold">حساب کاربری</h4>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li>
-                <button onClick={() => go({ name: 'dashboard' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'dashboard' })} className="transition-colors hover:text-primary">
                   داشبورد من
                 </button>
               </li>
               <li>
-                <button onClick={() => go({ name: 'dashboard', tab: 'bookings' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'dashboard', tab: 'bookings' })} className="transition-colors hover:text-primary">
                   رزروهای من
                 </button>
               </li>
               <li>
-                <button onClick={() => go({ name: 'new-listing' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'new-listing' })} className="transition-colors hover:text-primary">
                   ثبت آگهی
                 </button>
               </li>
               <li>
-                <button onClick={() => go({ name: 'dashboard', tab: 'favorites' })} className="transition-colors hover:text-foreground">
+                <button onClick={() => go({ name: 'dashboard', tab: 'favorites' })} className="transition-colors hover:text-primary">
                   علاقه‌مندی‌ها
                 </button>
               </li>
@@ -98,7 +92,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t pt-6 text-center text-xs text-muted-foreground sm:flex-row sm:text-right">
           <span>© {new Date().getFullYear()} اجاره‌بان. ساخته‌شده با Next.js 16 · Prisma · Tailwind.</span>
           <span className="flex items-center gap-3">
             <span>حریم خصوصی</span>

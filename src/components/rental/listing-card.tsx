@@ -66,9 +66,9 @@ export function ListingCard({ listing }: { listing: ListingDTO }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -6 }}
+      whileHover={{ y: -4 }}
       onClick={() => go({ name: 'listing', slug: listing.slug })}
-      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-premium"
+      className="group relative flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-300 hover:border-primary/30 hover:shadow-premium"
     >
       {/* Image */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
@@ -135,11 +135,19 @@ export function ListingCard({ listing }: { listing: ListingDTO }) {
         </h3>
 
         {/* Location + condition */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="size-3 text-primary/60" />
-          {listing.city}
-          <span className="text-muted-foreground/40">·</span>
-          <span>{CONDITION_LABELS[listing.condition]}</span>
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <MapPin className="size-3 shrink-0 text-primary/60" />
+            <span className="truncate">{listing.city}</span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="truncate">{CONDITION_LABELS[listing.condition]}</span>
+          </div>
+          {listing.status === 'ACTIVE' && (
+            <span className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="size-1.5 rounded-full bg-emerald-500" />
+              موجود
+            </span>
+          )}
         </div>
 
         {/* Price section */}
@@ -151,7 +159,7 @@ export function ListingCard({ listing }: { listing: ListingDTO }) {
                   {formatTomanCompact(listing.dailyPrice)}
                 </span>
                 <span className="text-xs font-normal text-muted-foreground">
-                  /روز
+                  / روز
                 </span>
               </div>
               {listing.weeklyPrice != null && (
@@ -176,7 +184,7 @@ export function ListingCard({ listing }: { listing: ListingDTO }) {
             </span>
             {listing.weeklyPrice != null && (
               <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                {formatTomanCompact(listing.weeklyPrice)}/هفته
+                {formatTomanCompact(listing.weeklyPrice)}/ هفته
               </span>
             )}
           </div>
