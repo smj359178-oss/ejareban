@@ -60,6 +60,9 @@ db/
 .zscripts/dev.pid
 tool-results/
 
+# Local project archives may embed the SQLite database above.
+/upload/
+
 # The project is bun-based (bun.lock is tracked); npm lockfiles are noise.
 package-lock.json
 .vercel
